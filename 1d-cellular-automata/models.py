@@ -1,9 +1,14 @@
 import numpy as np
+import math
+from random import randint
 
 LATTICE_LENGTH = 7
+NEIGHBORHOOD_SIZE = 7
 N_EPOCHS = 100
 N_AGENTS_PER_EPOCH = 100
-N_TIME_STEPS = 24
+N_TIME_STEPS = 300
+N_TRIALS = 10
+N_FITNESS_TRIALS = 100
 
 STATE_DICT = {
     np.array([0,0,0,0,0,0,0]).tobytes(): 0,
@@ -136,6 +141,14 @@ STATE_DICT = {
     np.array([1,1,1,1,1,1,1]).tobytes(): 127,
 }
 
+def get_random_agent_encoding():
+    encoding_size = math.pow(2, LATTICE_LENGTH)
+    agent_str_list = []
+    for i in range(encoding_size):
+        agent_str_list.append(randint(0, 1))
+    agent_str = "".join([str(e) for e in agent_str_list])
+    return agent_str
+
 def get_correct_end_state(init_state):
     state_val = np.sum(init_state)
     correct_end_state = False
@@ -143,20 +156,39 @@ def get_correct_end_state(init_state):
         correct_end_state = True
     return correct_end_state
 
-def apply_agent_rule(state, agent_idx, population):
-    agent_str = population[agent_idx]
+def rotate_state_arr(state, agent_idx):
+    rotation_val = 3 - agent_idx
+    if agent_idx > 3:
+        rotation_val = rotation_val + LATTICE_LENGTH
+    recentered_arr = (state[-rotation_val:] + state[:-rotation_val])
+    return recentered_arr
+
+def get_rule_index(state):
     try:
         rule_idx = STATE_DICT[state.tobytes()]
+        return rule_idx
     except:
         raise Exception(f"Invalid lattice state {state}")
-    rule_value = agent_idx[rule_idx]
-    state[agent_idx] = rule_value
-    return state
 
-def get_score(init_state, population):
+def apply_agent_rule(state, population, cell_idx):
+    agent_rule_str = population[cell_idx]
+    if cell_idx != math.floor(LATTICE_LENGTH / 2):
+        tmp_state = rotate_state_arr(state, cell_idx)
+        rule_idx = get_rule_index(tmp_state)
+    else:
+        rule_idx = get_rule_index(state)
+    rule_value = agent_rule_str[rule_idx]
+    return rule_value
+
+def get_score(init_state, population, target_cell_idx):
     state = init_state
     correct_end_state = get_correct_end_state(init_state)
-    for i in range(0, N_TIME_STEPS):
-        for agent in range(0, LATTICE_LENGTH):
-            state = apply_agent_rule(state, agent_str)
-
+    for i in range(0, N_TIME_STEPS): # Number of time steps we allow the system to update to
+        state_i = state
+        for cell_j_idx in range(0, LATTICE_LENGTH): # Apply the rules of each cell; "simulatenous"
+            state_i[cell_j_idx] = apply_agent_rule(state, population, cell_j_idx)
+        state = state_i
+    if state != correct_end_state:
+        return 0
+    else:
+        return 1
