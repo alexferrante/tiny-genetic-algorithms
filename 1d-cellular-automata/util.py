@@ -13,18 +13,13 @@ def generate_binary(n):
   for i in range(0, int(math.pow(2,n))):
     bin_arr.append("".join(map(str,bin_str))[::-1])
     bin_str[0] += 1
-    # Iterate through entire array if there carrying
     for j in range(0, len(bin_str) - 1):
-
       if bin_str[j] == 2:
         bin_str[j] = 0
         bin_str[j+1] += 1
         continue
-
       else:
         break
-
-    
   return bin_arr
 
 def main():
